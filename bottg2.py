@@ -99,7 +99,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         logger.debug(f"Start command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"Failed to send start message: {e}")
+        logger.error(f"Failed to send start message to user {update.message.from_user.id}: {e}")
         await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -119,7 +119,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await query.edit_message_text(text="Уведомления выключены")
         logger.debug(f"Button callback finished, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"Failed to handle button callback: {e}")
+        logger.error(f"Failed to handle button callback for user {user_id}: {e}")
 
 async def enable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -131,7 +131,8 @@ async def enable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Уведомления включены")
         logger.debug(f"Enable command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"Failed to send enable message: {e}")
+        logger.error(f"Failed to send enable message to user {user_id}: {e}")
+        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
 
 async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -144,7 +145,8 @@ async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Уведомления выключены")
         logger.debug(f"Disable command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"Failed to send disable message: {e}")
+        logger.error(f"Failed to send disable message to user {user_id}: {e}")
+        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
 
 async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -236,12 +238,13 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(f"Фильтр добавлен: {gift_name}. Текущие фильтры: {', '.join(current_filters)}")
         logger.debug(f"Filter command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"Failed to process filter command: {e}")
+        logger.error(f"Failed to process filter command for user {user_id}: {e}")
         await update.message.reply_text("Произошла ошибка при обработке команды /filter. Попробуйте позже.")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     logger.debug(f"Stats command received at {start_time}")
+    user_id = update.message.from_user.id
     try:
         today = datetime.now().strftime('%Y-%m-%d')
         today_stats = daily_stats.get(today, {})
@@ -259,13 +262,13 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(stats_message)
         logger.debug(f"Stats command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"Failed to send stats message: {e}")
+        logger.error(f"Failed to send stats message to user {user_id}: {e}")
         await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
 
 # Новая команда /help
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
-    logger.debug(f"Help command received at {start_time}")
+    logger.debug(f"Help command received at {start_time} from user {update.message.from_user.id}")
     help_text = (
         "📋 <b>Список команд:</b>\n"
         "/start — Запустить бота и получить приветственное сообщение 🚀\n"
@@ -276,14 +279,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
-        "/help — Показать этот список команд ℹ️"
+        "/help — Показать этот список команд ℹ️\n\n"
+        "Все новости про бота в канале: @NewMintGift_channel 📢"
     )
     try:
         await update.message.reply_text(help_text, parse_mode="HTML")
-        logger.debug(f"Help command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
+        logger.debug(f"Help command finished for user {update.message.from_user.id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
-        logger.error(f"Failed to send help message: {e}")
-        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
+        logger.error(f"Failed to send help message to user {update.message.from_user.id}: {e}")
+        # Проверяем, можно ли отправить сообщение об ошибке
+        try:
+            await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
+        except Exception as reply_error:
+            logger.error(f"Failed to send error message to user {update.message.from_user.id}: {reply_error}")
 
 async def connect_socketio():
     global sid
@@ -360,7 +368,7 @@ async def connect_socketio():
 
                                         # Нормализация имени подарка
                                         normalized_gift_name = gift_name_raw.lower().replace(" ", "").replace("-", "")
-                                        normalized_gifts = {gift.lower().replace(" ", "").replace("-", ""): gift for gift in GIFT_NAMES.values()}
+                                        normalized_gifts = {gift.lower().replace(" ", "").replace("-"): gift for gift in GIFT_NAMES.values()}
                                         gift_name = normalized_gifts.get(normalized_gift_name, gift_name_raw)
                                         logger.debug(f"Raw gift name: {gift_name_raw}, Normalized: {normalized_gift_name}, Final gift name: {gift_name}")
 
@@ -410,7 +418,7 @@ async def connect_socketio():
                                         for user_id in subscribed_users.copy():
                                             user_filter = user_filters.get(user_id, set())
                                             normalized_gift_name_for_filter = gift_name.lower().replace(" ", "").replace("-", "")
-                                            normalized_user_filters = {filter_name.lower().replace(" ", "").replace("-", "") for filter_name in user_filter}
+                                            normalized_user_filters = {filter_name.lower().replace(" ", "").replace("-"): filter_name for filter_name in user_filter}
                                             logger.debug(f"User {user_id} filter: {user_filter}, normalized filters: {normalized_user_filters}, gift_name: {gift_name}, normalized for filter: {normalized_gift_name_for_filter}")
                                             if not user_filter or normalized_gift_name_for_filter in normalized_user_filters:
                                                 logger.info(f"Sending notification to user {user_id} for gift {gift_name}")
