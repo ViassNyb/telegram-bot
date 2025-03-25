@@ -73,8 +73,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "📋 <b>Доступные команды:</b>\n"
         "/enable — Включить уведомления о новых подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
-        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
+        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
+        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
@@ -266,7 +266,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Failed to send stats message to user {user_id}: {str(e)}")
         await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
 
-# Команда /help с добавленным каналом
+# Команда /help с экранированием <gift_name>
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
@@ -276,8 +276,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/start — Запустить бота и получить приветственное сообщение 🚀\n"
         "/enable — Включить уведомления о новых NFT-подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
-        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
+        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
+        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
