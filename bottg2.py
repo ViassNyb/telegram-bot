@@ -73,8 +73,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "📋 <b>Доступные команды:</b>\n"
         "/enable — Включить уведомления о новых подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
-        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
+        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
+        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
@@ -93,7 +93,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Отправляем сообщение с обработкой ошибок
     try:
-        await asyncio.sleep(0.1)  # Задержка для избежания лимитов
         await update.message.reply_text(
             full_message,
             reply_markup=reply_markup,
@@ -102,11 +101,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.debug(f"Start command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send start message to user {user_id}: {str(e)}")
-        try:
-            await asyncio.sleep(0.1)
-            await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
-        except Exception as reply_error:
-            logger.error(f"Failed to send error message to user {user_id}: {str(reply_error)}")
+        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -134,16 +129,11 @@ async def enable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     subscribed_users.add(user_id)
     user_error_counts[user_id] = 0
     try:
-        await asyncio.sleep(0.1)
         await update.message.reply_text("Уведомления включены")
         logger.debug(f"Enable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send enable message to user {user_id}: {str(e)}")
-        try:
-            await asyncio.sleep(0.1)
-            await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
-        except Exception as reply_error:
-            logger.error(f"Failed to send error message to user {user_id}: {str(reply_error)}")
+        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
 
 async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -153,16 +143,11 @@ async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_filters.pop(user_id, None)
     user_error_counts.pop(user_id, None)
     try:
-        await asyncio.sleep(0.1)
         await update.message.reply_text("Уведомления выключены")
         logger.debug(f"Disable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send disable message to user {user_id}: {str(e)}")
-        try:
-            await asyncio.sleep(0.1)
-            await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
-        except Exception as reply_error:
-            logger.error(f"Failed to send error message to user {user_id}: {str(reply_error)}")
+        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
 
 async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -175,48 +160,40 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not args:
             current_filters = user_filters.get(user_id, set())
             if current_filters:
-                await asyncio.sleep(0.1)
-                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter <gift_name>\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del <gift_name>")
+                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter &lt;gift_name&gt;\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del &lt;gift_name&gt;")
             else:
-                await asyncio.sleep(0.1)
-                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter <gift_name> для добавления фильтра.")
+                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter &lt;gift_name&gt; для добавления фильтра.")
             logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
 
         if args[0].lower() == "clear":
             user_filters.pop(user_id, None)
-            await asyncio.sleep(0.1)
             await update.message.reply_text("Фильтры сброшены. Теперь вы будете получать уведомления о всех подарках.")
             logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
         elif args[0].lower() == "list":
             current_filters = user_filters.get(user_id, set())
             if current_filters:
-                await asyncio.sleep(0.1)
                 await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}")
             else:
-                await asyncio.sleep(0.1)
                 await update.message.reply_text("У вас нет активных фильтров.")
             logger.debug(f"Filter list command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
         elif args[0].lower() == "del":
             if len(args) < 2:
-                await asyncio.sleep(0.1)
-                await update.message.reply_text("Укажите подарок для удаления: /filter del <gift_name>")
+                await update.message.reply_text("Укажите подарок для удаления: /filter del &lt;gift_name&gt;")
                 logger.debug(f"Filter del command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
                 return
             gift_to_remove = " ".join(args[1:])
             current_filters = user_filters.get(user_id, set())
             if not current_filters:
-                await asyncio.sleep(0.1)
                 await update.message.reply_text("У вас нет активных фильтров.")
                 logger.debug(f"Filter del command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
                 return
             valid_gifts = set(GIFT_NAMES.values())
-            normalized_gifts = {gift.lower().replace(" ", "").replace("-"): gift for gift in valid_gifts}
-            normalized_input = gift_to_remove.lower().replace(" ", "").replace("-")
+            normalized_gifts = {gift.lower().replace(" ", "").replace("-", ""): gift for gift in valid_gifts}
+            normalized_input = gift_to_remove.lower().replace(" ", "").replace("-", "")
             if normalized_input not in normalized_gifts:
-                await asyncio.sleep(0.1)
                 await update.message.reply_text(f"Подарок '{gift_to_remove}' не найден. Доступные подарки: {', '.join(valid_gifts)}")
                 logger.debug(f"Filter del command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
                 return
@@ -225,14 +202,11 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 current_filters.remove(gift_name)
                 if current_filters:
                     user_filters[user_id] = current_filters
-                    await asyncio.sleep(0.1)
                     await update.message.reply_text(f"Подарок '{gift_name}' удалён из фильтров. Текущие фильтры: {', '.join(current_filters)}")
                 else:
                     user_filters.pop(user_id, None)
-                    await asyncio.sleep(0.1)
                     await update.message.reply_text(f"Подарок '{gift_name}' удалён. Фильтры пусты.")
             else:
-                await asyncio.sleep(0.1)
                 await update.message.reply_text(f"Подарок '{gift_name}' не найден в ваших фильтрах.")
             logger.debug(f"Filter del command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
@@ -242,14 +216,13 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.debug(f"Processing gift entry: {gift_entry}")
 
         valid_gifts = set(GIFT_NAMES.values())
-        normalized_gifts = {gift.lower().replace(" ", "").replace("-"): gift for gift in valid_gifts}
+        normalized_gifts = {gift.lower().replace(" ", "").replace("-", ""): gift for gift in valid_gifts}
         logger.debug(f"Normalized gifts: {normalized_gifts}")
 
-        normalized_input = gift_entry.lower().replace(" ", "").replace("-")
+        normalized_input = gift_entry.lower().replace(" ", "").replace("-", "")
         logger.debug(f"Normalized gift entry: {normalized_input}")
 
         if normalized_input not in normalized_gifts:
-            await asyncio.sleep(0.1)
             await update.message.reply_text(f"Подарок '{gift_entry}' не найден. Доступные подарки: {', '.join(valid_gifts)}")
             logger.debug(f"Gift not found: {gift_entry}")
             logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
@@ -263,16 +236,11 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         current_filters.add(gift_name)  # Добавляем новый подарок
         user_filters[user_id] = current_filters  # Сохраняем обновлённое множество
 
-        await asyncio.sleep(0.1)
         await update.message.reply_text(f"Фильтр добавлен: {gift_name}. Текущие фильтры: {', '.join(current_filters)}")
         logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to process filter command for user {user_id}: {str(e)}")
-        try:
-            await asyncio.sleep(0.1)
-            await update.message.reply_text("Произошла ошибка при обработке команды /filter. Попробуйте позже.")
-        except Exception as reply_error:
-            logger.error(f"Failed to send error message to user {user_id}: {str(reply_error)}")
+        await update.message.reply_text("Произошла ошибка при обработке команды /filter. Попробуйте позже.")
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -282,7 +250,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         today = datetime.now().strftime('%Y-%m-%d')
         today_stats = daily_stats.get(today, {})
         if not today_stats:
-            await asyncio.sleep(0.1)
             await update.message.reply_text("Сегодня ещё не было новых подарков.")
             logger.debug(f"Stats command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
@@ -293,16 +260,11 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         stats_message += "\nОбщая статистика:\n"
         for gift_name, count in gift_stats.items():
             stats_message += f"{gift_name}: {count}\n"
-        await asyncio.sleep(0.1)
         await update.message.reply_text(stats_message)
         logger.debug(f"Stats command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send stats message to user {user_id}: {str(e)}")
-        try:
-            await asyncio.sleep(0.1)
-            await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
-        except Exception as reply_error:
-            logger.error(f"Failed to send error message to user {user_id}: {str(reply_error)}")
+        await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
 
 # Команда /help
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -314,25 +276,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/start — Запустить бота и получить приветственное сообщение 🚀\n"
         "/enable — Включить уведомления о новых NFT-подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
-        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
+        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
+        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
-        "/help — Показать этот список команд ℹ️\n\n"
-        "Все новости про бота в канале: @NewMintGift_channel 📢"
+        "/help — Показать этот список команд ℹ️"
     )
     try:
-        await asyncio.sleep(0.1)
         await update.message.reply_text(help_text, parse_mode="HTML")
         logger.debug(f"Help command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send help message to user {user_id}: {str(e)}")
-        try:
-            await asyncio.sleep(0.1)
-            await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
-        except Exception as reply_error:
-            logger.error(f"Failed to send error message to user {user_id}: {str(reply_error)}")
+        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
 
 async def connect_socketio():
     global sid
@@ -408,8 +364,8 @@ async def connect_socketio():
                                         quantity = event_payload.get('Quantity', 'N/A')
 
                                         # Нормализация имени подарка
-                                        normalized_gift_name = gift_name_raw.lower().replace(" ", "").replace("-")
-                                        normalized_gifts = {gift.lower().replace(" ", "").replace("-"): gift for gift in GIFT_NAMES.values()}
+                                        normalized_gift_name = gift_name_raw.lower().replace(" ", "").replace("-", "")
+                                        normalized_gifts = {gift.lower().replace(" ", "").replace("-", ""): gift for gift in GIFT_NAMES.values()}
                                         gift_name = normalized_gifts.get(normalized_gift_name, gift_name_raw)
                                         logger.debug(f"Raw gift name: {gift_name_raw}, Normalized: {normalized_gift_name}, Final gift name: {gift_name}")
 
@@ -439,7 +395,7 @@ async def connect_socketio():
                                                     filtered_lines.append(line)
                                         filtered_description = '\n'.join(filtered_lines)
 
-                                        # Формируем сообщение
+                                        # Формируем сообщение с примечанием в конце
                                         message = (
                                             f"🎁 <b>Новый подарок:</b> {gift_name} #{gift_number}\n"
                                             f"🖼️ {filtered_description}\n"
@@ -453,13 +409,12 @@ async def connect_socketio():
                                         logger.debug(f"Subscribed users before sending: {subscribed_users}")
                                         for user_id in subscribed_users.copy():
                                             user_filter = user_filters.get(user_id, set())
-                                            normalized_gift_name_for_filter = gift_name.lower().replace(" ", "").replace("-")
-                                            normalized_user_filters = {filter_name.lower().replace(" ", "").replace("-") for filter_name in user_filter}
+                                            normalized_gift_name_for_filter = gift_name.lower().replace(" ", "").replace("-", "")
+                                            normalized_user_filters = {filter_name.lower().replace(" ", "").replace("-", "") for filter_name in user_filter}
                                             logger.debug(f"User {user_id} filter: {user_filter}, normalized filters: {normalized_user_filters}, gift_name: {gift_name}, normalized for filter: {normalized_gift_name_for_filter}")
                                             if not user_filter or normalized_gift_name_for_filter in normalized_user_filters:
                                                 logger.info(f"Sending notification to user {user_id} for gift {gift_name}")
                                                 try:
-                                                    await asyncio.sleep(0.1)
                                                     if image_preview:
                                                         await application.bot.send_photo(
                                                             chat_id=user_id,
