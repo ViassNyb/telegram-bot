@@ -47,6 +47,12 @@ GIFT_NAMES = {
 def generate_t():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
 
+# Функция для периодического логирования числа подписчиков
+async def log_subscriber_count():
+    while True:
+        logger.info(f"Количество подписчиков: {len(subscribed_users)}")
+        await asyncio.sleep(600)  # 600 секунд = 10 минут
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     logger.debug(f"Start command received at {start_time}")
@@ -66,11 +72,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "📋 <b>Доступные команды:</b>\n"
         "/enable — Включить уведомления о новых подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
-        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
+        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
-        "/stats — Посмотреть статистику подарков 📊\n\n"
+        "/stats — Посмотреть статистику подарков 📊\n"
+        "/help — Показать список всех команд ℹ️\n\n"
         "Если вы согласны с условиями, выберите действие ниже:"
     )
     
@@ -234,6 +241,25 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(stats_message)
     logger.debug(f"Stats command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
 
+# Новая команда /help
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    start_time = datetime.now()
+    logger.debug(f"Help command received at {start_time}")
+    help_text = (
+        "📋 <b>Список команд:</b>\n"
+        "/start — Запустить бота и получить приветственное сообщение 🚀\n"
+        "/enable — Включить уведомления о новых NFT-подарках 🔔\n"
+        "/disable — Выключить уведомления 🚫\n"
+        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
+        "/filter clear — Сбросить все фильтры 🗑️\n"
+        "/filter list — Показать текущие фильтры 📜\n"
+        "/stats — Посмотреть статистику подарков 📊\n"
+        "/help — Показать этот список команд ℹ️"
+    )
+    await update.message.reply_text(help_text, parse_mode="HTML")
+    logger.debug(f"Help command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
+
 async def connect_socketio():
     global sid
     headers = {
@@ -324,12 +350,13 @@ async def connect_socketio():
 
                                         # Формируем сообщение с примечанием в конце
                                         message = (
-                                            f"<b>Новый подарок:</b> {gift_name} #{gift_number}\n"
-                                            f"<b>Описание:</b> {description}\n"
-                                            f"<b>Владелец:</b> {owner}\n"
-                                            f"<b>Количество:</b> {quantity}\n"
-                                            f'<a href="{gift_url}">Посмотреть подарок</a>\n\n'
-                                            f'<i>ℹ️ Если ссылка на подарок не открывается, подождите несколько секунд.</i>'
+                                            f"🎁 <b>Новый подарок:</b> {gift_name} #{gift_number}\n"
+                                            f"🖼️ {description}\n"
+                                            f"👤 <b>Владелец:</b> {owner}\n"
+                                            f"📊 <b>Количество:</b> {quantity}\n"
+                                            f'<a href="{gift_url}">🔗 Посмотреть подарок</a>\n\n'
+                                            f'<i>ℹ️ Если ссылка на подарок не открывается, подождите несколько секунд.</i>\n'
+                                            f'<i>🗑️ Если чат стал тяжёлым из-за картинок, очистите историю: Настройки → Очистить историю.</i>'
                                         )
 
                                         logger.debug(f"Subscribed users before sending: {subscribed_users}")
@@ -400,11 +427,13 @@ async def main():
     application.add_handler(CommandHandler("disable", disable))
     application.add_handler(CommandHandler("filter", filter))
     application.add_handler(CommandHandler("stats", stats))
+    application.add_handler(CommandHandler("help", help_command))  # Добавляем команду /help
     await application.initialize()
     await application.start()
     await application.updater.start_polling(drop_pending_updates=True)
     logger.info("Telegram bot started")
     asyncio.create_task(connect_socketio())
+    asyncio.create_task(log_subscriber_count())  # Запускаем логирование числа подписчиков
     try:
         while True:
             await asyncio.sleep(1)
