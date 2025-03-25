@@ -157,9 +157,9 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not args:
             current_filters = user_filters.get(user_id, set())
             if current_filters:
-                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter <gift_name>\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del <gift_name>")
+                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter &lt;gift_name&gt;\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del &lt;gift_name&gt;")
             else:
-                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter <gift_name> для добавления фильтра.")
+                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter &lt;gift_name&gt; для добавления фильтра.")
             logger.debug(f"Filter command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
 
@@ -178,7 +178,7 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         elif args[0].lower() == "del":
             if len(args) < 2:
-                await update.message.reply_text("Укажите подарок для удаления: /filter del <gift_name>")
+                await update.message.reply_text("Укажите подарок для удаления: /filter del &lt;gift_name&gt;")
                 logger.debug(f"Filter del command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
                 return
             gift_to_remove = " ".join(args[1:])
@@ -373,10 +373,14 @@ async def connect_socketio():
                                             daily_stats[today] = {}
                                         daily_stats[today][gift_name] = daily_stats[today].get(gift_name, 0) + 1
 
+                                        # Фильтруем description, убираем строку "Gifted by..."
+                                        description_lines = description.split('\n')
+                                        filtered_description = '\n'.join(line for line in description_lines if not line.startswith('Gifted by'))
+
                                         # Формируем сообщение с примечанием в конце
                                         message = (
                                             f"🎁 <b>Новый подарок:</b> {gift_name} #{gift_number}\n"
-                                            f"🖼️ {description}\n"
+                                            f"🖼️ {filtered_description}\n"
                                             f"👤 <b>Владелец:</b> {owner}\n"
                                             f"📊 <b>Количество:</b> {quantity}\n"
                                             f'<a href="{gift_url}">🔗 Посмотреть подарок</a>\n\n'
