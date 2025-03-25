@@ -266,7 +266,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Failed to send stats message to user {user_id}: {str(e)}")
         await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
 
-# Исправленная команда /help
+# Команда /help с добавленным каналом
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
@@ -282,7 +282,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
         "/help — Показать этот список команд ℹ️\n\n"
-        "📢 Подписывайтесь на наш канал: <a href='https://t.me/NewMintGift_channel'>@NewMintGift_channel</a>"
+        "📢 Все новости в этом канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>"
     )
     try:
         await update.message.reply_text(help_text, parse_mode="HTML")
