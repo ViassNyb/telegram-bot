@@ -72,8 +72,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "📋 <b>Доступные команды:</b>\n"
         "/enable — Включить уведомления о новых подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
-        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
+        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
@@ -157,9 +157,9 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not args:
             current_filters = user_filters.get(user_id, set())
             if current_filters:
-                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter &lt;gift_name&gt;\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del &lt;gift_name&gt;")
+                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter <gift_name>\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del <gift_name>")
             else:
-                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter &lt;gift_name&gt; для добавления фильтра.")
+                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter <gift_name> для добавления фильтра.")
             logger.debug(f"Filter command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
 
@@ -178,7 +178,7 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         elif args[0].lower() == "del":
             if len(args) < 2:
-                await update.message.reply_text("Укажите подарок для удаления: /filter del &lt;gift_name&gt;")
+                await update.message.reply_text("Укажите подарок для удаления: /filter del <gift_name>")
                 logger.debug(f"Filter del command finished, took {(datetime.now() - start_time).total_seconds()} seconds")
                 return
             gift_to_remove = " ".join(args[1:])
@@ -271,8 +271,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/start — Запустить бота и получить приветственное сообщение 🚀\n"
         "/enable — Включить уведомления о новых NFT-подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
-        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
+        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
@@ -373,9 +373,27 @@ async def connect_socketio():
                                             daily_stats[today] = {}
                                         daily_stats[today][gift_name] = daily_stats[today].get(gift_name, 0) + 1
 
-                                        # Фильтруем description, убираем строку "Gifted by..."
+                                        # Фильтруем description, убираем всё, что связано с "Gifted by" или "Gifted to"
                                         description_lines = description.split('\n')
-                                        filtered_description = '\n'.join(line for line in description_lines if not line.startswith('Gifted by'))
+                                        filtered_lines = []
+                                        for line in description_lines:
+                                            # Приводим строку к нижнему регистру для проверки
+                                            line_lower = line.lower()
+                                            # Проверяем, содержит ли строка "gifted by" или "gifted to" (с учётом вариаций)
+                                            if "gifted by" in line_lower or "gifted to" in line_lower:
+                                                # Если строка содержит "Gifted by..." или "Gifted to...", пропускаем её
+                                                continue
+                                            else:
+                                                # Если в строке есть "Gifted by" или "Gifted to", но это часть строки, убираем эту часть
+                                                index = line_lower.find("gifted by")
+                                                if index == -1:
+                                                    index = line_lower.find("gifted to")
+                                                if index != -1:
+                                                    # Убираем всё от "Gifted by" или "Gifted to" до конца строки
+                                                    line = line[:index].rstrip()
+                                                if line:  # Добавляем строку, только если она не пустая после обработки
+                                                    filtered_lines.append(line)
+                                        filtered_description = '\n'.join(filtered_lines)
 
                                         # Формируем сообщение с примечанием в конце
                                         message = (
