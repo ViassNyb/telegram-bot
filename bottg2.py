@@ -73,8 +73,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "📋 <b>Доступные команды:</b>\n"
         "/enable — Включить уведомления о новых подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
-        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
+        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
@@ -160,9 +160,9 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not args:
             current_filters = user_filters.get(user_id, set())
             if current_filters:
-                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter &lt;gift_name&gt;\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del &lt;gift_name&gt;")
+                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter <gift_name>\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del <gift_name>")
             else:
-                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter &lt;gift_name&gt; для добавления фильтра.")
+                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter <gift_name> для добавления фильтра.")
             logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
 
@@ -181,7 +181,7 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         elif args[0].lower() == "del":
             if len(args) < 2:
-                await update.message.reply_text("Укажите подарок для удаления: /filter del &lt;gift_name&gt;")
+                await update.message.reply_text("Укажите подарок для удаления: /filter del <gift_name>")
                 logger.debug(f"Filter del command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
                 return
             gift_to_remove = " ".join(args[1:])
@@ -266,7 +266,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Failed to send stats message to user {user_id}: {str(e)}")
         await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
 
-# Команда /help
+# Команда /help с упоминанием канала
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
@@ -276,12 +276,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/start — Запустить бота и получить приветственное сообщение 🚀\n"
         "/enable — Включить уведомления о новых NFT-подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
-        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
+        "/filter <gift_name> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <gift_name> — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
-        "/help — Показать этот список команд ℹ️"
+        "/help — Показать этот список команд ℹ️\n\n"
+        "📢 Подписывайтесь на наш канал: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>"
     )
     try:
         await update.message.reply_text(help_text, parse_mode="HTML")
