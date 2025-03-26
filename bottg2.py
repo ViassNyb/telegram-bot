@@ -50,8 +50,7 @@ GIFT_NAMES = {
 def generate_t():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
 
-# Ф
-ункция для экранирования специальных символов в MarkdownV2
+# Function to escape special characters in MarkdownV2
 def escape_markdown_v2(text):
     special_chars = r'_*[]()~`>#+-=|{}.!'
     for char in special_chars:
@@ -59,7 +58,7 @@ def escape_markdown_v2(text):
     text = text.replace('⚕️', '%')
     return text
 
-# Функция для периодического логирования числа подписчиков
+# Function for periodic logging of subscriber count
 async def log_subscriber_count():
     while True:
         logger.info(f"Количество подписчиков: {len(subscribed_users)}")
