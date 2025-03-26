@@ -1,6 +1,6 @@
 import logging
-import backoff  # Добавляем библиотеку backoff
-import httpx  # Для настройки таймаута Telegram API
+import backoff
+import httpx
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import asyncio
@@ -10,7 +10,7 @@ import random
 import string
 from datetime import datetime, timedelta
 
-# Настройка логирования (поднимаем уровень до INFO)
+# Настройка логирования (уровень INFO)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await query.answer()
     try:
         if query.data == 'enable_notifications':
-            subscribed_users.add(user_id)
+獻            subscribed_users.add(user_id)
             await query.edit_message_text(text="Уведомления включены")
         elif query.data == 'disable_notifications':
             subscribed_users.discard(user_id)
@@ -484,8 +484,9 @@ async def connect_socketio():
 async def main():
     global application
     telegram_token = '7807721394:AAEl0lCLsfBSK05XzD6LrWUe0i_ofcoQd7c'
-    # Настройка HTTP-клиента с увеличенным таймаутом
-    http_client = httpx.AsyncClient(timeout=60.0)
+    # Настройка HTTP-клиента с увеличенным таймаутом через HTTPXRequest
+    from telegram.ext.httpx import HTTPXRequest
+    http_client = HTTPXRequest(http_client=httpx.AsyncClient(timeout=60.0))
     application = Application.builder().token(telegram_token).request(http_client).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))
