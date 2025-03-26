@@ -122,7 +122,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await query.answer()
     try:
         if query.data == 'enable_notifications':
-獻            subscribed_users.add(user_id)
+            subscribed_users.add(user_id)
             await query.edit_message_text(text="Уведомления включены")
         elif query.data == 'disable_notifications':
             subscribed_users.discard(user_id)
