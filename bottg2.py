@@ -485,7 +485,7 @@ async def main():
     global application
     telegram_token = '7807721394:AAEl0lCLsfBSK05XzD6LrWUe0i_ofcoQd7c'
     # Настройка HTTP-клиента с увеличенным таймаутом через HTTPXRequest
-    from telegram.ext.httpx import HTTPXRequest
+    from telegram.request import HTTPXRequest
     http_client = HTTPXRequest(http_client=httpx.AsyncClient(timeout=60.0))
     application = Application.builder().token(telegram_token).request(http_client).build()
     application.add_handler(CommandHandler("start", start))
