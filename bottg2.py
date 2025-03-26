@@ -50,7 +50,8 @@ GIFT_NAMES = {
 def generate_t():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
 
-# Функция для экранирования специальных символов в MarkdownV2
+# Ф
+ункция для экранирования специальных символов в MarkdownV2
 def escape_markdown_v2(text):
     special_chars = r'_*[]()~`>#+-=|{}.!'
     for char in special_chars:
@@ -277,7 +278,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Failed to send stats message to user {user_id}: {str(e)}")
         await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
 
-# Команда /help с экранированием <gift_name>
+# Команда /help с экранированием <gift_name> и ссылки
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
@@ -293,7 +294,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
         "/help — Показать этот список команд ℹ️\n\n"
-        "📢 Все новости в этом канале: [ @NewMintGift_channel](https://t.me/NewMintGift_channel)"
+        "📢 Все новости в этом канале: \\[ @NewMintGift_channel\\](https://t.me/NewMintGift_channel)"
     )
     try:
         await update.message.reply_text(help_text, parse_mode="MarkdownV2")
