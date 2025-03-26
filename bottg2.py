@@ -124,11 +124,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if query.data == 'enable_notifications':
             subscribed_users.add(user_id)
             await query.edit_message_text(text="Уведомления включены")
+            logger.info(f"User {user_id} enabled notifications. Current subscribed users: {subscribed_users}")
         elif query.data == 'disable_notifications':
             subscribed_users.discard(user_id)
             user_filters.pop(user_id, None)
             user_error_counts.pop(user_id, None)
             await query.edit_message_text(text="Уведомления выключены")
+            logger.info(f"User {user_id} disabled notifications. Current subscribed users: {subscribed_users}")
         logger.debug(f"Button callback finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to handle button callback for user {user_id}: {str(e)}")
@@ -141,6 +143,7 @@ async def enable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_error_counts[user_id] = 0
     try:
         await update.message.reply_text("Уведомления включены")
+        logger.info(f"User {user_id} enabled notifications via /enable. Current subscribed users: {subscribed_users}")
         logger.debug(f"Enable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send enable message to user {user_id}: {str(e)}")
@@ -155,6 +158,7 @@ async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_error_counts.pop(user_id, None)
     try:
         await update.message.reply_text("Уведомления выключены")
+        logger.info(f"User {user_id} disabled notifications via /disable. Current subscribed users: {subscribed_users}")
         logger.debug(f"Disable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send disable message to user {user_id}: {str(e)}")
@@ -277,7 +281,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Failed to send stats message to user {user_id}: {str(e)}")
         await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
 
-# Команда /help с экранированием <gift_name> и ссылки
+# Команда /help с исправленной ссылкой
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
@@ -293,7 +297,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
         "/help — Показать этот список команд ℹ️\n\n"
-        "📢 Все новости в этом канале: \\[ @NewMintGift_channel\\]\\(https://t\\.me/NewMintGift_channel\\)"
+        "📢 Все новости в этом канале: [ @NewMintGift_channel ](https://t.me/NewMintGift_channel)"
     )
     try:
         await update.message.reply_text(help_text, parse_mode="MarkdownV2")
@@ -427,7 +431,7 @@ async def connect_socketio():
                                     f"_🗑️ Если чат стал тяжёлым из-за картинок, очистите историю: Настройки → Очистить историю\\._"
                                 )
 
-                                logger.debug(f"Subscribed users before sending: {subscribed_users}")
+                                logger.info(f"Preparing to send notifications. Subscribed users: {subscribed_users}, User filters: {user_filters}")
                                 for user_id in subscribed_users.copy():
                                     user_filter = user_filters.get(user_id, set())
                                     normalized_gift_name_for_filter = gift_name.lower().replace(" ", "").replace("-", "")
