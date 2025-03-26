@@ -293,7 +293,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
         "/help — Показать этот список команд ℹ️\n\n"
-        "📢 Все новости в этом канале: \\[ @NewMintGift_channel\\]\\(https://t.me/NewMintGift_channel\\)"
+        "📢 Все новости в этом канале: \\[ @NewMintGift_channel\\]\\(https://t\\.me/NewMintGift_channel\\)"
     )
     try:
         await update.message.reply_text(help_text, parse_mode="MarkdownV2")
