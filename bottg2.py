@@ -8,6 +8,7 @@ import random
 import string
 from datetime import datetime, timedelta
 
+# Настройка логирования (уровень DEBUG для детализации)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -68,13 +69,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "- Используя этот бот, вы соглашаетесь с тем, что делаете это на свой страх и риск.\n\n"
     )
     
-    # Описание команд с экранированием <gift_name>
+    # Описание команд с исправленным <gift_name>
     commands_description = (
         "📋 <b>Доступные команды:</b>\n"
         "/enable — Включить уведомления о новых подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
-        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
+        "/filter <i>gift_name</i> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <i>gift_name</i> — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
@@ -101,7 +102,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.debug(f"Start command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send start message to user {user_id}: {str(e)}")
-        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
+        await update.message.reply_text(
+            "Ведутся технические работы, новости в канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>",
+            parse_mode='HTML'
+        )
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -113,11 +117,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if query.data == 'enable_notifications':
             subscribed_users.add(user_id)
             await query.edit_message_text(text="Уведомления включены")
+            logger.info(f"User {user_id} enabled notifications. Current subscribed users: {subscribed_users}")
         elif query.data == 'disable_notifications':
             subscribed_users.discard(user_id)
             user_filters.pop(user_id, None)
             user_error_counts.pop(user_id, None)
             await query.edit_message_text(text="Уведомления выключены")
+            logger.info(f"User {user_id} disabled notifications. Current subscribed users: {subscribed_users}")
         logger.debug(f"Button callback finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to handle button callback for user {user_id}: {str(e)}")
@@ -130,10 +136,14 @@ async def enable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_error_counts[user_id] = 0
     try:
         await update.message.reply_text("Уведомления включены")
+        logger.info(f"User {user_id} enabled notifications via /enable. Current subscribed users: {subscribed_users}")
         logger.debug(f"Enable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send enable message to user {user_id}: {str(e)}")
-        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
+        await update.message.reply_text(
+            "Ведутся технические работы, новости в канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>",
+            parse_mode='HTML'
+        )
 
 async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -144,10 +154,14 @@ async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_error_counts.pop(user_id, None)
     try:
         await update.message.reply_text("Уведомления выключены")
+        logger.info(f"User {user_id} disabled notifications via /disable. Current subscribed users: {subscribed_users}")
         logger.debug(f"Disable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send disable message to user {user_id}: {str(e)}")
-        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
+        await update.message.reply_text(
+            "Ведутся технические работы, новости в канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>",
+            parse_mode='HTML'
+        )
 
 async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -160,9 +174,9 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not args:
             current_filters = user_filters.get(user_id, set())
             if current_filters:
-                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter <gift_name>\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del <gift_name>")
+                await update.message.reply_text(f"Ваши текущие фильтры: {', '.join(current_filters)}\nЧтобы добавить фильтр, используйте /filter <i>gift_name</i>\nЧтобы сбросить фильтр, используйте /filter clear\nПосмотреть список фильтров: /filter list\nУдалить один фильтр: /filter del <i>gift_name</i>")
             else:
-                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter <gift_name> для добавления фильтра.")
+                await update.message.reply_text("У вас нет активных фильтров. Используйте /filter <i>gift_name</i> для добавления фильтра.")
             logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
 
@@ -181,7 +195,7 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         elif args[0].lower() == "del":
             if len(args) < 2:
-                await update.message.reply_text("Укажите подарок для удаления: /filter del <gift_name>")
+                await update.message.reply_text("Укажите подарок для удаления: /filter del <i>gift_name</i>")
                 logger.debug(f"Filter del command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
                 return
             gift_to_remove = " ".join(args[1:])
@@ -240,7 +254,10 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to process filter command for user {user_id}: {str(e)}")
-        await update.message.reply_text("Произошла ошибка при обработке команды /filter. Попробуйте позже.")
+        await update.message.reply_text(
+            "Ведутся технические работы, новости в канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>",
+            parse_mode='HTML'
+        )
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
@@ -264,9 +281,11 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.debug(f"Stats command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send stats message to user {user_id}: {str(e)}")
-        await update.message.reply_text("Произошла ошибка при отправке статистики. Попробуйте позже.")
+        await update.message.reply_text(
+            "Ведутся технические работы, новости в канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>",
+            parse_mode='HTML'
+        )
 
-# Команда /help с экранированием <gift_name>
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
@@ -276,8 +295,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/start — Запустить бота и получить приветственное сообщение 🚀\n"
         "/enable — Включить уведомления о новых NFT-подарках 🔔\n"
         "/disable — Выключить уведомления 🚫\n"
-        "/filter &lt;gift_name&gt; — Добавить фильтр для подарков 🎁\n"
-        "/filter del &lt;gift_name&gt; — Удалить конкретный фильтр ❌\n"
+        "/filter <i>gift_name</i> — Добавить фильтр для подарков 🎁\n"
+        "/filter del <i>gift_name</i> — Удалить конкретный фильтр ❌\n"
         "/filter clear — Сбросить все фильтры 🗑️\n"
         "/filter list — Показать текущие фильтры 📜\n"
         "/stats — Посмотреть статистику подарков 📊\n"
@@ -289,7 +308,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.debug(f"Help command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send help message to user {user_id}: {str(e)}")
-        await update.message.reply_text("Произошла ошибка при отправке сообщения. Попробуйте позже.")
+        await update.message.reply_text(
+            "Ведутся технические работы, новости в канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>",
+            parse_mode='HTML'
+        )
 
 async def connect_socketio():
     global sid
@@ -303,7 +325,7 @@ async def connect_socketio():
         'Accept-Language': 'ru,en;q=0.9',
         'Connection': 'keep-alive',
     }
-    timeout = aiohttp.ClientTimeout(total=5)
+    timeout = aiohttp.ClientTimeout(total=10)  # Увеличиваем таймаут до 10 секунд
     while True:
         try:
             async with aiohttp.ClientSession(cookies=None, connector=aiohttp.TCPConnector(ssl=True), timeout=timeout) as session:
@@ -311,7 +333,7 @@ async def connect_socketio():
                 params = {'EIO': '4', 'transport': 'polling', 't': t_value}
                 async with session.get(SOCKET_IO_URL, params=params, headers=headers) as response:
                     if response.status != 200:
-                        logger.error(f"Failed to connect: {response.status}")
+                        logger.error(f"Failed to connect: {response.status}, Response: {await response.text()}")
                         await asyncio.sleep(10)
                         continue
                     text = await response.text()
@@ -407,7 +429,7 @@ async def connect_socketio():
                                             f'<i>🗑️ Если чат стал тяжёлым из-за картинок, очистите историю: Настройки → Очистить историю.</i>'
                                         )
 
-                                        logger.debug(f"Subscribed users before sending: {subscribed_users}")
+                                        logger.info(f"Preparing to send notifications. Subscribed users: {subscribed_users}, User filters: {user_filters}")
                                         for user_id in subscribed_users.copy():
                                             user_filter = user_filters.get(user_id, set())
                                             normalized_gift_name_for_filter = gift_name.lower().replace(" ", "").replace("-", "")
@@ -457,18 +479,24 @@ async def connect_socketio():
                                 elif message.startswith('3'):
                                     logger.debug("Received pong message")
                     except Exception as e:
-                        logger.error(f"Error in polling loop: {str(e)}")
+                        logger.error(f"Error in polling loop: {str(e)}", exc_info=True)  # Добавляем exc_info для полного стека ошибки
                         break
                     await asyncio.sleep(1)
         except Exception as e:
-            logger.error(f"Error in connect_socketio: {str(e)}")
+            logger.error(f"Error in connect_socketio: {str(e)}", exc_info=True)  # Добавляем exc_info для полного стека ошибки
             await asyncio.sleep(10)
             continue
 
 async def main():
     global application
-    telegram_token = '7807721394:AAEl0lCLsfBSK05XzD6LrWUe0i_ofcoQd7c'
-    application = Application.builder().token(telegram_token).build()
+    telegram_token = '7807721394:AAEl0lCLsfBSK05XzD6LrWUe0i_ofcoQd7c'  # Оставляем токен захардкоженым
+    # Настройка HTTP-клиента с увеличенным таймаутом
+    from telegram.request import HTTPXRequest
+    http_client = HTTPXRequest(
+        connect_timeout=60.0,  # Таймаут на установку соединения
+        read_timeout=60.0      # Таймаут на чтение ответа
+    )
+    application = Application.builder().token(telegram_token).request(http_client).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(CommandHandler("enable", enable))
