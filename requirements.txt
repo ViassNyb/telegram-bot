@@ -3,3 +3,4 @@ aiohttp==3.11.14
 aiohttp-socks==0.10.1
 brotli==1.1.0
 backoff==2.2.1
+aiofiles==24.1.0
