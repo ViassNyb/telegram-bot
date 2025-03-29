@@ -7,17 +7,19 @@ import json
 import random
 import string
 from datetime import datetime, timedelta
+import aiofiles  # Добавляем aiofiles для асинхронной работы с файлами
 
 # Настройка логирования (уровень DEBUG для детализации)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 SOCKET_IO_URL = "https://gsocket.trump.tg/socket.io/"
-subscribed_users = set()
+subscribers = {}  # Изменяем на словарь для совместимости с предыдущими предложениями
 user_filters = {}
 user_error_counts = {}
 gift_stats = {}
 daily_stats = {}
+stats_cache = {"total_notifications": 0, "total_users": 0}  # Добавляем кэш для статистики
 application = None
 sid = None
 
@@ -48,10 +50,37 @@ GIFT_NAMES = {
 def generate_t():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
 
+# Функции для асинхронной работы с файлами
+async def save_subscribers():
+    async with aiofiles.open("subscribers.json", "w") as f:
+        await f.write(json.dumps(list(subscribers.keys())))
+
+async def load_subscribers():
+    global subscribers
+    try:
+        async with aiofiles.open("subscribers.json", "r") as f:
+            data = await f.read()
+            subscribers = {int(user_id): True for user_id in json.loads(data)}
+    except FileNotFoundError:
+        subscribers = {}
+
+async def save_user_filters():
+    async with aiofiles.open("filters.json", "w") as f:
+        await f.write(json.dumps({user_id: list(filters) for user_id, filters in user_filters.items()}))
+
+async def load_user_filters():
+    global user_filters
+    try:
+        async with aiofiles.open("filters.json", "r") as f:
+            data = await f.read()
+            user_filters = {int(user_id): set(filters) for user_id, filters in json.loads(data).items()}
+    except FileNotFoundError:
+        user_filters = {}
+
 # Функция для периодического логирования числа подписчиков
 async def log_subscriber_count():
     while True:
-        logger.info(f"Количество подписчиков: {len(subscribed_users)}")
+        logger.info(f"Количество подписчиков: {len(subscribers)}")
         await asyncio.sleep(600)  # 600 секунд = 10 минут
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -94,6 +123,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     # Отправляем сообщение с обработкой ошибок
     try:
+        if user_id not in subscribers:
+            subscribers[user_id] = True
+            await save_subscribers()
         await update.message.reply_text(
             full_message,
             reply_markup=reply_markup,
@@ -115,15 +147,19 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await query.answer()
     try:
         if query.data == 'enable_notifications':
-            subscribed_users.add(user_id)
+            subscribers[user_id] = True
+            await save_subscribers()
             await query.edit_message_text(text="Уведомления включены")
-            logger.info(f"User {user_id} enabled notifications. Current subscribed users: {subscribed_users}")
+            logger.info(f"User {user_id} enabled notifications. Current subscribers: {len(subscribers)}")
         elif query.data == 'disable_notifications':
-            subscribed_users.discard(user_id)
-            user_filters.pop(user_id, None)
-            user_error_counts.pop(user_id, None)
+            if user_id in subscribers:
+                del subscribers[user_id]
+                user_filters.pop(user_id, None)
+                user_error_counts.pop(user_id, None)
+                await save_subscribers()
+                await save_user_filters()
             await query.edit_message_text(text="Уведомления выключены")
-            logger.info(f"User {user_id} disabled notifications. Current subscribed users: {subscribed_users}")
+            logger.info(f"User {user_id} disabled notifications. Current subscribers: {len(subscribers)}")
         logger.debug(f"Button callback finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to handle button callback for user {user_id}: {str(e)}")
@@ -132,11 +168,12 @@ async def enable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
     logger.debug(f"Enable command received at {start_time} from user {user_id}")
-    subscribed_users.add(user_id)
+    subscribers[user_id] = True
     user_error_counts[user_id] = 0
     try:
+        await save_subscribers()
         await update.message.reply_text("Уведомления включены")
-        logger.info(f"User {user_id} enabled notifications via /enable. Current subscribed users: {subscribed_users}")
+        logger.info(f"User {user_id} enabled notifications via /enable. Current subscribers: {len(subscribers)}")
         logger.debug(f"Enable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send enable message to user {user_id}: {str(e)}")
@@ -149,12 +186,15 @@ async def disable(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     start_time = datetime.now()
     user_id = update.message.from_user.id
     logger.debug(f"Disable command received at {start_time} from user {user_id}")
-    subscribed_users.discard(user_id)
-    user_filters.pop(user_id, None)
-    user_error_counts.pop(user_id, None)
+    if user_id in subscribers:
+        del subscribers[user_id]
+        user_filters.pop(user_id, None)
+        user_error_counts.pop(user_id, None)
+        await save_subscribers()
+        await save_user_filters()
     try:
         await update.message.reply_text("Уведомления выключены")
-        logger.info(f"User {user_id} disabled notifications via /disable. Current subscribed users: {subscribed_users}")
+        logger.info(f"User {user_id} disabled notifications via /disable. Current subscribers: {len(subscribers)}")
         logger.debug(f"Disable command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
     except Exception as e:
         logger.error(f"Failed to send disable message to user {user_id}: {str(e)}")
@@ -182,6 +222,7 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         if args[0].lower() == "clear":
             user_filters.pop(user_id, None)
+            await save_user_filters()
             await update.message.reply_text("Фильтры сброшены. Теперь вы будете получать уведомления о всех подарках.")
             logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
             return
@@ -220,6 +261,7 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 else:
                     user_filters.pop(user_id, None)
                     await update.message.reply_text(f"Подарок '{gift_name}' удалён. Фильтры пусты.")
+                await save_user_filters()
             else:
                 await update.message.reply_text(f"Подарок '{gift_name}' не найден в ваших фильтрах.")
             logger.debug(f"Filter del command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
@@ -249,6 +291,7 @@ async def filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         current_filters = user_filters.get(user_id, set())
         current_filters.add(gift_name)  # Добавляем новый подарок
         user_filters[user_id] = current_filters  # Сохраняем обновлённое множество
+        await save_user_filters()
 
         await update.message.reply_text(f"Фильтр добавлен: {gift_name}. Текущие фильтры: {', '.join(current_filters)}")
         logger.debug(f"Filter command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
@@ -266,12 +309,13 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         today = datetime.now().strftime('%Y-%m-%d')
         today_stats = daily_stats.get(today, {})
-        if not today_stats:
-            await update.message.reply_text("Сегодня ещё не было новых подарков.")
-            logger.debug(f"Stats command finished for user {user_id}, took {(datetime.now() - start_time).total_seconds()} seconds")
-            return
         total_today = sum(today_stats.values())
-        stats_message = f"Статистика за сегодня ({today}):\nВсего подарков: {total_today}\n\n"
+        stats_message = (
+            f"📊 Статистика:\n"
+            f"Всего уведомлений: {stats_cache['total_notifications']}\n"
+            f"Всего пользователей: {stats_cache['total_users']}\n\n"
+            f"Статистика за сегодня ({today}):\nВсего подарков: {total_today}\n\n"
+        )
         for gift_name, count in today_stats.items():
             stats_message += f"{gift_name}: {count}\n"
         stats_message += "\nОбщая статистика:\n"
@@ -312,6 +356,89 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "Ведутся технические работы, новости в канале: <a href=\"https://t.me/NewMintGift_channel\">@NewMintGift_channel</a>",
             parse_mode='HTML'
         )
+
+async def send_notification(user_id, gift_data):
+    try:
+        gift_name = gift_data.get("gift_name", "Unknown Gift")
+        gift_number = gift_data.get("number", "Unknown Number")
+        description = gift_data.get("description", "No description available")
+        image_preview = gift_data.get("image_preview", None)
+        owner = gift_data.get("owner", "Unknown Owner")
+        quantity = gift_data.get("quantity", "N/A")
+        gift_url = gift_data.get("gift_url", "https://t.me/nft")
+
+        # Фильтруем description, убираем всё, что связано с "Gifted by" или "Gifted to"
+        description_lines = description.split('\n')
+        filtered_lines = []
+        for line in description_lines:
+            line_lower = line.lower()
+            if "gifted by" in line_lower or "gifted to" in line_lower:
+                continue
+            else:
+                index = line_lower.find("gifted by")
+                if index == -1:
+                    index = line_lower.find("gifted to")
+                if index != -1:
+                    line = line[:index].rstrip()
+                if line:
+                    filtered_lines.append(line)
+        filtered_description = '\n'.join(filtered_lines)
+
+        # Формируем сообщение
+        message = (
+            f"🎁 <b>Новый подарок:</b> {gift_name} #{gift_number}\n"
+            f"🖼️ {filtered_description}\n"
+            f"👤 <b>Владелец:</b> {owner}\n"
+            f"📊 <b>Количество:</b> {quantity}\n"
+            f'<a href="{gift_url}">🔗 Посмотреть подарок</a>\n\n'
+            f'<i>ℹ️ Если ссылка на подарок не открывается, подождите несколько секунд.</i>\n'
+            f'<i>🗑️ Если чат стал тяжёлым из-за картинок, очистите историю: Настройки → Очистить историю.</i>'
+        )
+
+        if image_preview:
+            await application.bot.send_photo(
+                chat_id=user_id,
+                photo=image_preview,
+                caption=message,
+                parse_mode='HTML'
+            )
+        else:
+            await application.bot.send_message(
+                chat_id=user_id,
+                text=message,
+                parse_mode='HTML'
+            )
+        logger.info(f"Successfully sent message to {user_id}")
+        user_error_counts[user_id] = 0
+    except Exception as e:
+        logger.error(f"Failed to send message to {user_id}: {str(e)}")
+        user_error_counts[user_id] = user_error_counts.get(user_id, 0) + 1
+        if user_error_counts[user_id] >= 3:
+            logger.warning(f"User {user_id} has too many errors, removing from subscribers")
+            if user_id in subscribers:
+                del subscribers[user_id]
+                user_filters.pop(user_id, None)
+                user_error_counts.pop(user_id, None)
+                await save_subscribers()
+                await save_user_filters()
+
+async def send_notification_to_all(gift_data):
+    tasks = []
+    for user_id in subscribers.copy():
+        user_filter = user_filters.get(user_id, set())
+        normalized_gift_name = gift_data.get("normalized_gift_name", "").lower().replace(" ", "").replace("-", "")
+        normalized_user_filters = {filter_name.lower().replace(" ", "").replace("-", "") for filter_name in user_filter}
+        logger.debug(f"User {user_id} filter: {user_filter}, normalized filters: {normalized_user_filters}, gift_name: {gift_data.get('gift_name')}, normalized for filter: {normalized_gift_name}")
+        if not user_filter or normalized_gift_name in normalized_user_filters:
+            logger.info(f"Sending notification to user {user_id} for gift {gift_data.get('gift_name')}")
+            tasks.append(send_notification(user_id, gift_data))
+    
+    # Отправляем уведомления параллельно с учётом лимитов Telegram (30 сообщений в секунду)
+    for i in range(0, len(tasks), 30):
+        batch = tasks[i:i + 30]
+        await asyncio.gather(*batch, return_exceptions=True)
+        if i + 30 < len(tasks):
+            await asyncio.sleep(1)  # Задержка 1 секунда между партиями
 
 async def connect_socketio():
     global sid
@@ -401,68 +528,23 @@ async def connect_socketio():
                                             daily_stats[today] = {}
                                         daily_stats[today][gift_name] = daily_stats[today].get(gift_name, 0) + 1
 
-                                        # Фильтруем description, убираем всё, что связано с "Gifted by" или "Gifted to"
-                                        description_lines = description.split('\n')
-                                        filtered_lines = []
-                                        for line in description_lines:
-                                            line_lower = line.lower()
-                                            if "gifted by" in line_lower or "gifted to" in line_lower:
-                                                continue
-                                            else:
-                                                index = line_lower.find("gifted by")
-                                                if index == -1:
-                                                    index = line_lower.find("gifted to")
-                                                if index != -1:
-                                                    line = line[:index].rstrip()
-                                                if line:
-                                                    filtered_lines.append(line)
-                                        filtered_description = '\n'.join(filtered_lines)
+                                        # Обновляем кэш статистики
+                                        stats_cache["total_notifications"] += 1
+                                        stats_cache["total_users"] = len(subscribers)
 
-                                        # Формируем сообщение с примечанием в конце
-                                        message = (
-                                            f"🎁 <b>Новый подарок:</b> {gift_name} #{gift_number}\n"
-                                            f"🖼️ {filtered_description}\n"
-                                            f"👤 <b>Владелец:</b> {owner}\n"
-                                            f"📊 <b>Количество:</b> {quantity}\n"
-                                            f'<a href="{gift_url}">🔗 Посмотреть подарок</a>\n\n'
-                                            f'<i>ℹ️ Если ссылка на подарок не открывается, подождите несколько секунд.</i>\n'
-                                            f'<i>🗑️ Если чат стал тяжёлым из-за картинок, очистите историю: Настройки → Очистить историю.</i>'
-                                        )
+                                        gift_data = {
+                                            "gift_name": gift_name,
+                                            "normalized_gift_name": normalized_gift_name,
+                                            "number": gift_number,
+                                            "description": description,
+                                            "image_preview": image_preview,
+                                            "owner": owner,
+                                            "quantity": quantity,
+                                            "gift_url": gift_url
+                                        }
 
-                                        logger.info(f"Preparing to send notifications. Subscribed users: {subscribed_users}, User filters: {user_filters}")
-                                        for user_id in subscribed_users.copy():
-                                            user_filter = user_filters.get(user_id, set())
-                                            normalized_gift_name_for_filter = gift_name.lower().replace(" ", "").replace("-", "")
-                                            normalized_user_filters = {filter_name.lower().replace(" ", "").replace("-", "") for filter_name in user_filter}
-                                            logger.debug(f"User {user_id} filter: {user_filter}, normalized filters: {normalized_user_filters}, gift_name: {gift_name}, normalized for filter: {normalized_gift_name_for_filter}")
-                                            if not user_filter or normalized_gift_name_for_filter in normalized_user_filters:
-                                                logger.info(f"Sending notification to user {user_id} for gift {gift_name}")
-                                                try:
-                                                    if image_preview:
-                                                        await application.bot.send_photo(
-                                                            chat_id=user_id,
-                                                            photo=image_preview,
-                                                            caption=message,
-                                                            parse_mode='HTML'
-                                                        )
-                                                    else:
-                                                        await application.bot.send_message(
-                                                            chat_id=user_id,
-                                                            text=message,
-                                                            parse_mode='HTML'
-                                                        )
-                                                    logger.info(f"Successfully sent message to {user_id}")
-                                                    user_error_counts[user_id] = 0
-                                                except Exception as e:
-                                                    logger.error(f"Failed to send message to {user_id}: {str(e)}")
-                                                    user_error_counts[user_id] = user_error_counts.get(user_id, 0) + 1
-                                                    if user_error_counts[user_id] >= 3:
-                                                        logger.warning(f"User {user_id} has too many errors, removing from subscribed users")
-                                                        subscribed_users.discard(user_id)
-                                                        user_filters.pop(user_id, None)
-                                                        user_error_counts.pop(user_id, None)
-                                            else:
-                                                logger.debug(f"Notification for {gift_name} not sent to user {user_id} due to filter mismatch")
+                                        logger.info(f"Preparing to send notifications. Subscribers: {len(subscribers)}, User filters: {user_filters}")
+                                        await send_notification_to_all(gift_data)
                                     elif event_name == 'message' and event_payload.get('type') == 'online':
                                         pass
                                 elif message.startswith('0'):
@@ -479,22 +561,21 @@ async def connect_socketio():
                                 elif message.startswith('3'):
                                     logger.debug("Received pong message")
                     except Exception as e:
-                        logger.error(f"Error in polling loop: {str(e)}", exc_info=True)  # Добавляем exc_info для полного стека ошибки
+                        logger.error(f"Error in polling loop: {str(e)}", exc_info=True)
                         break
                     await asyncio.sleep(1)
         except Exception as e:
-            logger.error(f"Error in connect_socketio: {str(e)}", exc_info=True)  # Добавляем exc_info для полного стека ошибки
+            logger.error(f"Error in connect_socketio: {str(e)}", exc_info=True)
             await asyncio.sleep(10)
             continue
 
 async def main():
     global application
-    telegram_token = '7807721394:AAEl0lCLsfBSK05XzD6LrWUe0i_ofcoQd7c'  # Оставляем токен захардкоженым
-    # Настройка HTTP-клиента с увеличенным таймаутом
+    telegram_token = '7807721394:AAEl0lCLsfBSK05XzD6LrWUe0i_ofcoQd7c'
     from telegram.request import HTTPXRequest
     http_client = HTTPXRequest(
-        connect_timeout=60.0,  # Таймаут на установку соединения
-        read_timeout=60.0      # Таймаут на чтение ответа
+        connect_timeout=60.0,
+        read_timeout=60.0
     )
     application = Application.builder().token(telegram_token).request(http_client).build()
     application.add_handler(CommandHandler("start", start))
@@ -505,6 +586,8 @@ async def main():
     application.add_handler(CommandHandler("stats", stats))
     application.add_handler(CommandHandler("help", help_command))
     await application.initialize()
+    await load_subscribers()
+    await load_user_filters()
     await application.start()
     await application.updater.start_polling(drop_pending_updates=True)
     logger.info("Telegram bot started")
